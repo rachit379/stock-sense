@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Stock Market Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/3.0.3/plotly.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stock-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .positive {
+            color: #10b981;
+        }
+        
+        .negative {
+            color: #ef4444;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .feed-item {
+            transition: all 0.2s ease;
+        }
+        
+        .feed-item:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .sentiment-positive {
+            border-left: 4px solid #10b981;
+        }
+        
+        .sentiment-negative {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .sentiment-neutral {
+            border-left: 4px solid #6b7280;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-card shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-line text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">StockSense Dashboard</h1>
+                        <p class="text-sm text-gray-600">Indian Market Intelligence</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm text-gray-600">
+                        <div class="w-2 h-2 bg-green-500 rounded-full pulse-animation"></div>
+                        <span>Live Data</span>
+                    </div>
+                    <button id="refreshBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Stock Tracking Section -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Stock Selection -->
+                <div class="glass-card rounded-xl p-6 shadow-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Track Your Stocks</h2>
+                        <button id="addStockBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Add Stock
+                        </button>
+                    </div>
+                    
+                    <!-- Stock Input Form -->
+                    <div id="stockForm" class="hidden mb-6 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex space-x-4">
+                            <input type="text" id="stockSymbol" placeholder="Enter NSE Symbol (e.g., TATAMOTORS)" 
+                                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <button id="trackStockBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                Track
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-2">Popular stocks: RELIANCE, TCS, HDFCBANK, INFY, SBIN</p>
+                    </div>
+                    
+                    <!-- Tracked Stocks Grid -->
+                    <div id="stocksGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Stock cards will be dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Market Overview Chart -->
+                <div class="glass-card rounded-xl p-6 shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Market Overview</h3>
+                    <div id="marketChart" style="height: 400px;"></div>
+                </div>
+            </div>
+
+            <!-- RSS Feed Section -->
+            <div class="space-y-6">
+                <!-- Financial News Feed -->
+                <div class="glass-card rounded-xl p-6 shadow-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-900">Financial News</h2>
+                        <div class="flex space-x-2">
+                            <button class="filter-btn active px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700" data-filter="all">All</button>
+                            <button class="filter-btn px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700" data-filter="positive">Positive</button>
+                            <button class="filter-btn px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700" data-filter="negative">Negative</button>
+                        </div>
+                    </div>
+                    
+                    <div id="newsFeed" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- News items will be dynamically loaded here -->
+                    </div>
+                </div>
+
+                <!-- Market Indices -->
+                <div class="glass-card rounded-xl p-6 shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Market Indices</h3>
+                    <div id="indicesList" class="space-y-3">
+                        <!-- Indices will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Sentiment Analysis -->
+                <div class="glass-card rounded-xl p-6 shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Market Sentiment</h3>
+                    <div class="flex items-center justify-center">
+                        <div class="relative w-32 h-32">
+                            <svg class="w-32 h-32 transform -rotate-90">
+                                <circle cx="64" cy="64" r="56" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                                <circle id="sentimentCircle" cx="64" cy="64" r="56" stroke="#10b981" stroke-width="8" 
+                                        fill="none" stroke-dasharray="351.86" stroke-dashoffset="175.93"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div id="sentimentScore" class="text-2xl font-bold text-gray-900">65%</div>
+                                    <div class="text-sm text-gray-600">Bullish</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="text-lg font-medium">Loading market data...</span>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
